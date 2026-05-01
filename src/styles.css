@@ -91,6 +91,127 @@ button {
   margin-right: 5px;
 }
 
+#onboarding-app {
+  padding: 3rem 2rem;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+#onboarding-app p {
+  margin: 0.75rem 0;
+}
+
+#onboarding-app #btn-get-started {
+  margin-top: 1.5rem;
+}
+
+#onboarding-app .step {
+  display: none;
+}
+
+#onboarding-app .step.active {
+  display: block;
+}
+
+#onboarding-app .status-warning {
+  color: #c84b00;
+  margin: 0.75rem 0;
+  font-size: 0.9em;
+}
+
+#onboarding-app .status-info {
+  color: #555;
+  margin: 0.75rem 0;
+  font-size: 0.9em;
+}
+
+#onboarding-app #btn-skip-accessibility {
+  margin-top: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+#onboarding-app #btn-skip-microphone {
+  margin-top: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+#onboarding-app #hotkey-capture-field {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 2px dashed #aaa;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  color: #555;
+  font-size: 0.95em;
+  user-select: none;
+}
+
+#onboarding-app #hotkey-capture-field.capturing {
+  border-color: #396cd8;
+  color: #396cd8;
+  background-color: #f0f4ff;
+}
+
+#onboarding-app #hotkey-display {
+  min-height: 1.5rem;
+  margin: 0.5rem 0;
+  font-weight: 600;
+  text-align: center;
+  color: #0f0f0f;
+  font-size: 1.1em;
+}
+
+#onboarding-app #btn-confirm-hotkey {
+  margin-top: 0.75rem;
+}
+
+#onboarding-app #btn-skip-hotkey {
+  margin-top: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+#onboarding-app .permission-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+  font-size: 0.95em;
+}
+
+#onboarding-app .permission-item .granted {
+  color: #2a7a2a;
+  font-weight: 700;
+  width: 1.2em;
+  text-align: center;
+}
+
+#onboarding-app .permission-item .missing {
+  color: #c84b00;
+  font-weight: 700;
+  width: 1.2em;
+  text-align: center;
+}
+
+#onboarding-app #btn-finish {
+  margin-top: 1rem;
+}
+
+#onboarding-app #btn-finish-anyway {
+  margin-top: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+#permission-warning {
+  padding: 0.75rem 1rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  color: #664d03;
+  font-size: 0.875em;
+  margin: 0.5rem;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -108,5 +229,42 @@ button {
   }
   button:active {
     background-color: #0f0f0f69;
+  }
+
+  #onboarding-app .status-warning {
+    color: #ff8c42;
+  }
+
+  #onboarding-app .status-info {
+    color: #aaa;
+  }
+
+  #onboarding-app #hotkey-capture-field {
+    border-color: #666;
+    color: #aaa;
+  }
+
+  #onboarding-app #hotkey-capture-field.capturing {
+    border-color: #7b9ef0;
+    color: #7b9ef0;
+    background-color: #1a2040;
+  }
+
+  #onboarding-app #hotkey-display {
+    color: #f6f6f6;
+  }
+
+  #onboarding-app .permission-item .granted {
+    color: #5fba5f;
+  }
+
+  #onboarding-app .permission-item .missing {
+    color: #ff8c42;
+  }
+
+  #permission-warning {
+    background: #3d2e00;
+    border-color: #ffc107;
+    color: #ffd966;
   }
 }

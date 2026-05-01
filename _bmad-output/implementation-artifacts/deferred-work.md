@@ -38,3 +38,25 @@
 - Overlay transparency defeated by shared styles.css opaque background [src/styles.css] — explicitly deferred to Story 4.2; overlay body/html must set `background: transparent`
 - No meta CSP fallback in any HTML file — pre-existing; add `<meta http-equiv="Content-Security-Policy">` as defense-in-depth when CSP config is addressed
 - `macOSPrivateApi: true` present in tauri.conf.json but absent from Story 1.4 spec — documentation discrepancy from prior story; update spec if accuracy matters for future reference
+
+## Deferred from: code review of 2-6-permission-revocation-monitoring (2026-04-30)
+
+- Monitor thread (`start_permission_monitor`) has no cancellation/shutdown mechanism — spawns infinite loop with no exit condition or `JoinHandle`; `std::process::exit()` terminates threads today but graceful shutdown should be added when a teardown/cleanup story is created [src-tauri/src/permissions.rs]
+
+## Deferred from: code review of 2-5-permission-validation-and-onboarding-completion (2026-04-30)
+
+- Permission monitor thread (`start_permission_monitor`) has no shutdown/cancellation mechanism — spawns detached `std::thread` with infinite loop, no `JoinHandle` stored, no way to stop on app quit [src-tauri/src/permissions.rs] — Story 2.6 scope
+- `PermissionChangedPayload` struct and `test_permission_changed_payload_fields` test are Story 2.6 code present in working tree — verify test count alignment when 2.6 is reviewed
+- Event names `permission_revoked`/`permission_restored` use snake_case — confirm JS listener convention matches when Story 2.6 frontend wiring is implemented
+
+## Deferred from: code review of 3-1-global-ptt-hotkey-registration (2026-04-30)
+
+- No shutdown/re-registration mechanism for hotkey listener — changing hotkey in settings requires app restart; `rdev::listen` thread has no cancellation. Add live-reload in a future settings story. [src-tauri/src/hotkey.rs]
+- `rdev::listen` failure has no recovery path — if CGEventTap is invalidated (e.g., permission revoked at runtime), thread exits with no retry or user notification. Story 3.5 integration should handle graceful degradation. [src-tauri/src/hotkey.rs:193]
+
+## Deferred from: code review of 2-2-accessibility-permission-request (2026-04-29)
+
+- FFI `bool` vs `u8` for `AXIsProcessTrusted` return type [src-tauri/src/permissions.rs:8] — macOS `Boolean` is `unsigned char`, not C99 `_Bool`; declaring as `-> bool` in extern "C" relies on Apple always returning 0/1. Spec prescribes this declaration. Revisit if UB concerns arise.
+- `is_first_launch` and onboarding show logic is Story 2.1 scope [src-tauri/src/lib.rs] — first-launch detection and onboarding window show were implemented alongside 2.2 but belong to Story 2.1.
+- Pre-existing `.expect()` in `run()` [src-tauri/src/lib.rs] — `expect("error while running tauri application")` is technically unwrap outside tests. Pre-existing from Story 1.1.
+- `is_first_launch` checks `settings.json` vs tauri-plugin-store actual on-disk path [src-tauri/src/lib.rs] — verify that `tauri-plugin-store` writes exactly `settings.json` (not a variant like `.settings.json.dat`). Story 2.1 scope.

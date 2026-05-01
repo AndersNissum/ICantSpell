@@ -1,6 +1,6 @@
 # Story 1.5: CI Pipeline
 
-Status: review
+Status: done
 
 ## Story
 

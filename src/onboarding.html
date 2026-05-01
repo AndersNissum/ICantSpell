@@ -7,7 +7,46 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- First launch onboarding wizard — implemented in Story 2.1 -->
+  <div id="onboarding-app">
+    <div class="step active" id="step-welcome">
+      <h1>Welcome to ICantSpell</h1>
+      <p>ICantSpell lets you dictate text by voice — hold a key, speak, and your words appear wherever you're typing, in any app.</p>
+      <p>Everything runs locally on your Mac. No internet connection. No cloud service. Your voice never leaves your device.</p>
+      <button id="btn-get-started">Get Started →</button>
+    </div>
+    <div class="step" id="step-accessibility">
+      <h1>Accessibility Permission</h1>
+      <p>ICantSpell needs Accessibility permission to inject your dictated text into any app — word processors, browsers, text editors, and more. Without it, voice typing will not work.</p>
+      <p>Click "Grant Accessibility" to open System Settings. Add ICantSpell to the Accessibility list, then return to this window.</p>
+      <div id="accessibility-status"></div>
+      <button id="btn-grant-accessibility">Grant Accessibility</button>
+      <button id="btn-skip-accessibility">Skip for Now</button>
+    </div>
+    <div class="step" id="step-microphone">
+      <h1>Microphone Permission</h1>
+      <p>ICantSpell needs Microphone permission to capture your voice while you hold the push-to-talk key. There is no background listening — the microphone is active only while the key is held.</p>
+      <p>Click "Grant Microphone" to allow access. If the system dialog does not appear, click it again to open System Settings.</p>
+      <div id="microphone-status"></div>
+      <button id="btn-grant-microphone">Grant Microphone</button>
+      <button id="btn-skip-microphone">Skip for Now</button>
+    </div>
+    <div class="step" id="step-hotkey">
+      <h1>Push-to-Talk Hotkey</h1>
+      <p>Choose the key you'll hold to start dictating. Most people use Right Option — it doesn't interfere with normal typing.</p>
+      <p>Click the field below, then press any key or combination.</p>
+      <div id="hotkey-capture-field" tabindex="0">Click to capture hotkey</div>
+      <div id="hotkey-display"></div>
+      <button id="btn-confirm-hotkey" disabled>Use This Hotkey</button>
+      <button id="btn-skip-hotkey">Use Default (Right Option)</button>
+    </div>
+    <div class="step" id="step-validation">
+      <h1>Setup Complete</h1>
+      <p>Here's your permission summary before you start.</p>
+      <div id="validation-status"></div>
+      <button id="btn-finish" style="display:none">Finish Setup</button>
+      <button id="btn-finish-anyway" style="display:none">Finish Anyway</button>
+    </div>
+  </div>
   <script type="module" src="/onboarding.js"></script>
 </body>
 </html>

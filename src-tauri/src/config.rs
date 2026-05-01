@@ -2,6 +2,7 @@
 use tauri_plugin_store::StoreExt;
 
 pub const DEFAULT_CONFIDENCE_THRESHOLD: f32 = 0.85;
+pub const DEFAULT_PTT_HOTKEY: &str = "AltRight";
 const STORE_FILE: &str = "settings.json";
 const SETTINGS_KEY: &str = "settings";
 
@@ -64,6 +65,23 @@ pub fn ensure_defaults(app: &tauri::AppHandle) -> Result<(), crate::error::AppEr
     Ok(())
 }
 
+/// Tauri command: update the PTT hotkey binding in persistent settings.
+///
+/// The hotkey string format is a `KeyboardEvent.code`-derived value from the
+/// onboarding frontend (e.g., `"AltRight"`, `"Alt+Space"`). Story 3.1 (`hotkey.rs`)
+/// is responsible for parsing this string into a platform-specific event tap.
+#[tauri::command]
+pub async fn save_ptt_hotkey(app: tauri::AppHandle, hotkey: String) -> Result<(), String> {
+    // Validate the hotkey string is parseable before persisting, so unsupported
+    // key codes are rejected immediately rather than failing on next launch.
+    if !hotkey.is_empty() {
+        crate::hotkey::parse_hotkey(&hotkey).map_err(|e| e.to_string())?;
+    }
+    let mut settings = load(&app);
+    settings.ptt_hotkey = hotkey;
+    save(&app, &settings).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,5 +129,11 @@ mod tests {
         assert_eq!(deserialized.ptt_hotkey, "RightOption");
         assert_eq!(deserialized.selected_model, "small");
         assert_eq!(deserialized.confidence_threshold, 0.75_f32);
+    }
+
+    #[test]
+    fn test_default_ptt_hotkey_constant_value() {
+        assert_eq!(DEFAULT_PTT_HOTKEY, "AltRight");
+        assert!(!DEFAULT_PTT_HOTKEY.is_empty());
     }
 }

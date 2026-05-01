@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-27
-last_updated: 2026-04-29
+last_updated: 2026-05-01  # 3-2 implementation complete → review
 project: ICantSpell
 
 project_key: NOKEY
@@ -49,23 +49,23 @@ development_status:
   1-2-core-error-types-and-stt-trait-interface: done
   1-3-configuration-persistence-foundation: done
   1-4-three-window-tauri-architecture: done
-  1-5-ci-pipeline: review
+  1-5-ci-pipeline: done
   epic-1-retrospective: optional
 
   # Epic 2: First Launch & Onboarding
-  epic-2: backlog
-  2-1-first-launch-detection-and-onboarding-wizard-shell: backlog
-  2-2-accessibility-permission-request: backlog
-  2-3-microphone-permission-request: backlog
-  2-4-ptt-hotkey-configuration: backlog
-  2-5-permission-validation-and-onboarding-completion: backlog
-  2-6-permission-revocation-monitoring: backlog
+  epic-2: in-progress
+  2-1-first-launch-detection-and-onboarding-wizard-shell: done
+  2-2-accessibility-permission-request: done
+  2-3-microphone-permission-request: done
+  2-4-ptt-hotkey-configuration: done
+  2-5-permission-validation-and-onboarding-completion: done
+  2-6-permission-revocation-monitoring: done
   epic-2-retrospective: optional
 
   # Epic 3: Voice Dictation Pipeline
-  epic-3: backlog
-  3-1-global-ptt-hotkey-registration: backlog
-  3-2-microphone-audio-capture-pipeline: backlog
+  epic-3: in-progress
+  3-1-global-ptt-hotkey-registration: done
+  3-2-microphone-audio-capture-pipeline: review
   3-3-whisper-backend-and-async-model-loading: backlog
   3-4-axuielement-text-injection: backlog
   3-5-end-to-end-voice-pipeline-integration: backlog

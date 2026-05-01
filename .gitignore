@@ -1,6 +1,12 @@
 # Claude Code
 .claude/
 
+# agents
+.agents
+
+# IDE
+.vscode/
+
 
 # Rust / Cargo
 src-tauri/target/

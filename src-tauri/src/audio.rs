@@ -1,5 +1,5 @@
 //! Audio capture pipeline — cpal mic capture during PTT hold.
-//! Captures at device-native sample rate, resamples to 16kHz for Whisper.
+//! Captures at device-native sample rate, resamples to 16kHz mono for Whisper.
 //! See architecture.md § Audio Pipeline Architecture.
 
 use crate::error::AppError;
@@ -9,6 +9,9 @@ use std::sync::{Arc, Mutex};
 
 /// Whisper expects 16kHz mono f32 audio.
 pub const WHISPER_SAMPLE_RATE: u32 = 16_000;
+
+/// Maximum capture duration in seconds. Prevents unbounded memory growth.
+const MAX_CAPTURE_SECONDS: u32 = 120;
 
 /// Commands sent from the PTT bridge to the audio capture thread.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,8 +63,12 @@ pub fn resample_to_16khz(samples: &[f32], source_rate: u32) -> Vec<f32> {
 }
 
 /// Convert i16 audio samples to f32 in [-1.0, 1.0] range.
+/// Uses 32768.0 as divisor for symmetric normalization.
 pub fn convert_i16_to_f32(samples: &[i16]) -> Vec<f32> {
-    samples.iter().map(|&s| s as f32 / i16::MAX as f32).collect()
+    samples
+        .iter()
+        .map(|&s| s as f32 / 32768.0)
+        .collect()
 }
 
 /// Start the audio capture pipeline.
@@ -119,7 +126,7 @@ fn audio_capture_loop(cmd_rx: CaptureCommandReceiver, audio_tx: AudioBufferSende
 }
 
 /// Capture audio from the default input device until a `Stop` command is received.
-/// On stop, resamples to 16kHz and sends the buffer via `audio_tx`.
+/// On stop, resamples to 16kHz mono and sends the buffer via `audio_tx`.
 fn capture_until_stop(
     cmd_rx: &CaptureCommandReceiver,
     audio_tx: &AudioBufferSender,
@@ -135,43 +142,75 @@ fn capture_until_stop(
 
     let sample_rate = supported_config.sample_rate().0;
     let sample_format = supported_config.sample_format();
+    let channels = supported_config.channels() as usize;
     let config: cpal::StreamConfig = supported_config.into();
 
     tracing::debug!(
         sample_rate = sample_rate,
         format = ?sample_format,
+        channels = channels,
         "Audio device config"
     );
 
-    // Shared buffer for the cpal callback to write into
+    // Max mono samples we'll accept before stopping capture
+    let max_mono_samples = sample_rate as usize * MAX_CAPTURE_SECONDS as usize;
+
+    // Shared buffer for the cpal callback to write into (mono channel 0 only)
     let buffer: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::with_capacity(
-        sample_rate as usize * 30, // up to 30s at native rate
+        (sample_rate as usize * 30).min(max_mono_samples),
     )));
     let buffer_clone = Arc::clone(&buffer);
 
     // Build the input stream based on sample format
     let stream = match sample_format {
-        cpal::SampleFormat::F32 => device
-            .build_input_stream(
-                &config,
-                move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                    if let Ok(mut buf) = buffer_clone.lock() {
-                        buf.extend_from_slice(data);
-                    }
-                },
-                move |err| {
-                    tracing::error!("Audio stream error: {}", err);
-                },
-                None,
-            )
-            .map_err(|e| AppError::Audio(format!("Failed to build f32 stream: {}", e)))?,
+        cpal::SampleFormat::F32 => {
+            let ch = channels;
+            let max = max_mono_samples;
+            device
+                .build_input_stream(
+                    &config,
+                    move |data: &[f32], _: &cpal::InputCallbackInfo| {
+                        match buffer_clone.lock() {
+                            Ok(mut buf) => {
+                                if buf.len() >= max {
+                                    return; // cap reached
+                                }
+                                // Extract channel 0 from interleaved data
+                                buf.extend(data.chunks(ch).map(|frame| frame[0]));
+                            }
+                            Err(_) => {
+                                tracing::warn!("Audio buffer mutex poisoned — dropping samples");
+                            }
+                        }
+                    },
+                    move |err| {
+                        tracing::error!("Audio stream error: {}", err);
+                    },
+                    None,
+                )
+                .map_err(|e| AppError::Audio(format!("Failed to build f32 stream: {}", e)))?
+        }
         cpal::SampleFormat::I16 => {
+            let ch = channels;
+            let max = max_mono_samples;
+            let buffer_clone2 = Arc::clone(&buffer);
             device
                 .build_input_stream(
                     &config,
                     move |data: &[i16], _: &cpal::InputCallbackInfo| {
-                        if let Ok(mut buf) = buffer_clone.lock() {
-                            buf.extend(data.iter().map(|&s| s as f32 / i16::MAX as f32));
+                        match buffer_clone2.lock() {
+                            Ok(mut buf) => {
+                                if buf.len() >= max {
+                                    return; // cap reached
+                                }
+                                // Extract channel 0 and convert i16 → f32
+                                buf.extend(
+                                    data.chunks(ch).map(|frame| frame[0] as f32 / 32768.0),
+                                );
+                            }
+                            Err(_) => {
+                                tracing::warn!("Audio buffer mutex poisoned — dropping samples");
+                            }
                         }
                     },
                     move |err| {
@@ -302,8 +341,10 @@ mod tests {
         let output = convert_i16_to_f32(&input);
         assert_eq!(output.len(), 4);
         assert!((output[0] - 0.0).abs() < f32::EPSILON, "zero should map to 0.0");
-        assert!((output[1] - 1.0).abs() < f32::EPSILON, "MAX should map to 1.0");
-        assert!(output[2] < -0.99, "MIN should map to ~-1.0");
+        // i16::MAX / 32768.0 = 0.999969...
+        assert!((output[1] - (i16::MAX as f32 / 32768.0)).abs() < f32::EPSILON);
+        // i16::MIN / 32768.0 = -1.0 exactly
+        assert!((output[2] - (-1.0)).abs() < f32::EPSILON, "MIN should map to -1.0");
         assert!((output[3] - 0.5).abs() < 0.01, "half-MAX should map to ~0.5");
     }
 
@@ -311,6 +352,16 @@ mod tests {
     fn test_convert_i16_to_f32_empty() {
         let output = convert_i16_to_f32(&[]);
         assert!(output.is_empty());
+    }
+
+    #[test]
+    fn test_convert_i16_to_f32_symmetric() {
+        // Verify output is always within [-1.0, 1.0]
+        let extremes = vec![i16::MIN, i16::MAX, 0, 1, -1];
+        let output = convert_i16_to_f32(&extremes);
+        for &sample in &output {
+            assert!((-1.0..=1.0).contains(&sample), "sample {} out of range", sample);
+        }
     }
 
     #[test]

@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-27
-last_updated: 2026-05-01  # 3-2 implementation complete → review
+last_updated: 2026-05-03  # 3-2 code review complete → done
 project: ICantSpell
 
 project_key: NOKEY
@@ -65,7 +65,7 @@ development_status:
   # Epic 3: Voice Dictation Pipeline
   epic-3: in-progress
   3-1-global-ptt-hotkey-registration: done
-  3-2-microphone-audio-capture-pipeline: review
+  3-2-microphone-audio-capture-pipeline: done
   3-3-whisper-backend-and-async-model-loading: backlog
   3-4-axuielement-text-injection: backlog
   3-5-end-to-end-voice-pipeline-integration: backlog

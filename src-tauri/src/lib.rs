@@ -88,25 +88,33 @@ pub fn run() {
             let settings = config::load(app.handle());
 
             // Start audio capture pipeline — always ready, even if hotkey not configured yet
-            let audio_pipeline = audio::start_audio_pipeline()
-                .unwrap_or_else(|e| {
-                    tracing::error!("Failed to start audio pipeline: {}", e);
-                    panic!("Audio pipeline is required for voice dictation");
-                });
+            let audio_pipeline = match audio::start_audio_pipeline() {
+                Ok(pipeline) => pipeline,
+                Err(e) => {
+                    tracing::error!("Failed to start audio pipeline: {} — voice dictation disabled", e);
+                    // Cannot proceed with voice dictation, but don't crash the app
+                    return Ok(());
+                }
+            };
 
-            // Store audio buffer receiver for Story 3.3 (Whisper STT consumption)
-            let _audio_rx = audio_pipeline.audio_rx;
+            // Store audio buffer receiver in Tauri managed state for Story 3.3 (Whisper STT).
+            // Wrap in Mutex since mpsc::Receiver is not Sync.
+            app.manage(std::sync::Mutex::new(Some(audio_pipeline.audio_rx)));
+
+            // Store command_tx so the pipeline stays alive even without a hotkey configured
+            let capture_tx = audio_pipeline.command_tx;
 
             if settings.ptt_hotkey.is_empty() {
                 tracing::info!("No PTT hotkey configured — skipping listener startup");
+                // Keep capture_tx alive in managed state so pipeline thread doesn't exit
+                app.manage(std::sync::Mutex::new(Some(capture_tx)));
             } else {
                 let (ptt_tx, ptt_rx) = std::sync::mpsc::channel();
                 hotkey::start_hotkey_listener(&settings.ptt_hotkey, ptt_tx)
                     .unwrap_or_else(|e| tracing::error!("Failed to start hotkey listener: {}", e));
 
                 // Bridge: PttEvent → CaptureCommand
-                let capture_tx = audio_pipeline.command_tx;
-                std::thread::Builder::new()
+                let _bridge_handle = std::thread::Builder::new()
                     .name("ptt-audio-bridge".to_string())
                     .spawn(move || {
                         loop {
@@ -129,11 +137,10 @@ pub fn run() {
                                 }
                             }
                         }
-                    })
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to spawn PTT-audio bridge thread: {}", e);
-                        panic!("PTT-audio bridge is required");
                     });
+                if let Err(e) = _bridge_handle {
+                    tracing::error!("Failed to spawn PTT-audio bridge thread: {}", e);
+                }
             }
 
             if first_launch {

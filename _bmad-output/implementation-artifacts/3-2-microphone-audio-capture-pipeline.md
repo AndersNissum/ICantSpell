@@ -1,6 +1,6 @@
 # Story 3.2: Microphone Audio Capture Pipeline
 
-Status: review
+Status: done
 
 ## Story
 
@@ -190,6 +190,28 @@ if !settings.ptt_hotkey.is_empty() {
 - [Source: _bmad-output/planning-artifacts/prd.md § FR1, FR2, FR4, FR28, NFR10, NFR13]
 - [Source: _bmad-output/implementation-artifacts/3-1-global-ptt-hotkey-registration.md § Dev Notes, Thread Model]
 - [Source: MEMORY — Audio sample rate mismatch risk from previous project]
+
+### Review Findings
+
+- [x] [Review][Decision] **Mono downmix for multi-channel input devices** — Applied: extract channel 0 from interleaved frames in callback using `data.chunks(channels).map(|frame| frame[0])`. [audio.rs] (blind+edge+auditor)
+
+- [x] [Review][Decision] **`_audio_rx` dropped at end of setup closure** — Applied: store in Tauri managed state via `app.manage(Mutex::new(Some(audio_rx)))` for Story 3.3 retrieval. [lib.rs] (auditor+edge)
+
+- [x] [Review][Patch] **`convert_i16_to_f32` asymmetric scaling** — Applied: divide by `32768.0f32` for symmetric [-1.0, 1.0] range. [audio.rs:68, audio.rs:170] (blind+edge)
+
+- [x] [Review][Patch] **Unbounded buffer growth on long PTT holds** — Applied: added `MAX_CAPTURE_SECONDS = 120` constant, callback checks `buf.len() >= max` and stops extending. [audio.rs] (blind+edge)
+
+- [x] [Review][Patch] **Mutex poisoning silently drops all audio** — Applied: `Err` branch now logs at `warn!` level. [audio.rs] (blind+edge)
+
+- [x] [Review][Patch] **`panic!` on audio pipeline startup failure** — Applied: returns `Ok(())` early with error log instead of panicking. Bridge thread failure also no longer panics. [lib.rs] (blind)
+
+- [x] [Review][Patch] **`command_tx` dropped when no hotkey configured** — Applied: stored in Tauri managed state via `app.manage(Mutex::new(Some(capture_tx)))` so pipeline thread stays alive. [lib.rs] (edge+auditor)
+
+- [x] [Review][Defer] **Linear interpolation resampler has no anti-alias filter** — 3:1 downsampling without low-pass pre-filter introduces aliasing. Real impact on Whisper accuracy is uncertain. Acceptable for v1; consider `rubato` crate if transcription quality suffers. [audio.rs:37-60] — deferred, acceptable for v1 per story spec
+
+- [x] [Review][Defer] **No device-change handling for hot-unplugged USB mics** — If default device is disconnected mid-capture, stream error callback logs but capture loop blocks forever. No timeout on recv. [audio.rs:199] — deferred, edge case for v1
+
+- [x] [Review][Defer] **Additional sample format support (U16, I32, F64)** — Only F32 and I16 handled. Some USB devices report other formats. [audio.rs:153-190] — deferred, uncommon on macOS CoreAudio
 
 ## Dev Agent Record
 

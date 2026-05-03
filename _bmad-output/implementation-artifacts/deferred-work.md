@@ -60,3 +60,9 @@
 - `is_first_launch` and onboarding show logic is Story 2.1 scope [src-tauri/src/lib.rs] — first-launch detection and onboarding window show were implemented alongside 2.2 but belong to Story 2.1.
 - Pre-existing `.expect()` in `run()` [src-tauri/src/lib.rs] — `expect("error while running tauri application")` is technically unwrap outside tests. Pre-existing from Story 1.1.
 - `is_first_launch` checks `settings.json` vs tauri-plugin-store actual on-disk path [src-tauri/src/lib.rs] — verify that `tauri-plugin-store` writes exactly `settings.json` (not a variant like `.settings.json.dat`). Story 2.1 scope.
+
+## Deferred from: code review of 3-2-microphone-audio-capture-pipeline (2026-05-01)
+
+- Linear interpolation resampler has no anti-alias filter — 3:1 downsampling without low-pass pre-filter introduces aliasing artifacts. Acceptable for v1; consider `rubato` crate if transcription quality suffers. [src-tauri/src/audio.rs:37-60]
+- No device-change handling for hot-unplugged USB mics — if default device is disconnected mid-capture, stream error callback logs but capture loop blocks forever waiting for Stop command. No timeout on recv. [src-tauri/src/audio.rs:199]
+- Additional sample format support (U16, I32, F64) — only F32 and I16 handled; some USB devices report other formats. Uncommon on macOS CoreAudio. [src-tauri/src/audio.rs:153-190]
